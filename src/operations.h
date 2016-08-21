@@ -97,6 +97,12 @@ namespace sharp {
   */
   VImage Trim(VImage image, int const tolerance);
 
+  /*
+    Overlay text over the image
+   */
+  VImage Text(VImage image, std::string text, std::string align, int *colors,
+    int *pos, int const width, std::string font, int const spacing);
+
 }  // namespace sharp
 
 #endif  // SRC_OPERATIONS_H_

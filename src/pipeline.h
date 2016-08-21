@@ -39,6 +39,13 @@ struct PipelineBaton {
   int overlayYOffset;
   bool overlayTile;
   bool overlayCutout;
+  std::string text;
+  std::string textAlign;
+  int colors[3];
+  int pos[2];
+  int textWidth;
+  std::string font;
+  int lineSpacing;
   std::string booleanFileIn;
   char *booleanBufferIn;
   size_t booleanBufferInLength;
@@ -120,6 +127,11 @@ struct PipelineBaton {
     overlayYOffset(-1),
     overlayTile(false),
     overlayCutout(false),
+    text(""),
+    textAlign("left"),
+    textWidth(-1),
+    font("sans"),
+    lineSpacing(16),
     booleanBufferInLength(0),
     topOffsetPre(-1),
     topOffsetPost(-1),

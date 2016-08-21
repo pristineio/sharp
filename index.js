@@ -100,6 +100,15 @@ var Sharp = function(input, options) {
     overlayYOffset : -1,
     overlayTile: false,
     overlayCutout: false,
+    // text overlay options
+    text: '',
+    textAlign: 'left',
+    textColor: [255, 255, 255],
+    textOffset: [0, 0],
+    textWidth: -1,
+    font: 'sans',
+    fontSize: 12,
+    lineSpacing: 0,
     // output options
     formatOut: 'input',
     fileOut: '',
@@ -431,6 +440,80 @@ Sharp.prototype.overlayWith = function(overlay, options) {
         throw new Error('Unsupported overlay gravity ' + options.gravity);
       }
     }
+  }
+  return this;
+};
+
+/*
+  Overlay with a text, with various options of font, color, sizes
+ */
+
+Sharp.prototype.text = function(text, options) {
+  var alignReplacements = {
+    left: 'low',
+    center: 'centre',
+    centre: 'centre',
+    right: 'high'
+  };
+  var defaultOptions = {
+    align: 'left',
+    color: '#ffffff',
+    left: 0,
+    top: 0,
+    width: 0,
+    font: 'sans',
+    fontSize: 12,
+    lineSpacing: 0,
+    aspectRatio: 0.6
+  };
+  options = Object.assign(defaultOptions, options);
+  if (isString(text)) {
+    this.options.text = text;
+  } else {
+    throw new Error('Invalid value for text, or text is of zero length');
+  }
+  if (isObject(options)) {
+    if (isString(options.align) && contains(options.align, ['left', 'center', 'centre', 'right'])) {
+      this.options.textAlign = alignReplacements[options.align];
+    } else {
+      throw new Error('Invalid value for align' + options.align);
+    }
+    if (isString(options.color) && options.color.length === 7) {
+      this.options.textColor = [
+        parseInt(options.color.slice(1, 3), 16),
+        parseInt(options.color.slice(3, 5), 16),
+        parseInt(options.color.slice(5), 16)
+      ];
+    } else {
+      throw new Error('Invalid value for color ' + options.color + '. Expected a HTML color');
+    }
+    if (isInteger(options.left) && inRange(options.left, 0, maximum.width) &&
+        isInteger(options.top) && inRange(options.top, 0, maximum.height)) {
+      this.options.textOffset = [options.left, options.top];
+    } else {
+      throw new Error('Invalid text offset left ' + options.left + ' and/or top ' + options.top);
+    }
+    if (isString(options.font)) {
+      this.options.font = options.font;
+    } else {
+      throw new Error('Invalid value for font ' + options.font + '. Expected a string');
+    }
+    if (isInteger(options.fontSize)) {
+      this.options.fontSize = options.fontSize;
+    } else {
+      throw new Error('Invalid value for font size ' + options.fontSize + '. Expected an integer');
+    }
+    if (isInteger(options.lineSpacing)) {
+      this.options.lineSpacing = options.lineSpacing;
+    } else {
+      throw new Error('Invalid value for line spacing ' + options.lineSpacing + '. Expected an integer');
+    }
+    if (isInteger(options.width) && inRange(options.width, 0, maximum.width)) {
+      this.options.textWidth = options.width;
+    } else {
+      throw new Error('Invalid value for width ' + options.width + '. Expected an integer');
+    }
+    this.options.font = (this.options.font || 'sans') + ' ' + (this.options.fontSize || 12);
   }
   return this;
 };

@@ -458,4 +458,30 @@ namespace sharp {
     return image.extract_area(left, top, width, height);
   }
 
+  VImage Text(VImage image, std::string text, std::string align, int *colors,
+    int *pos, int const width, std::string font,
+    int const spacing) {
+
+    std::vector<double> color(colors, colors + 3);
+    std::vector<double> zero(3);
+
+    VImage pixel = image.new_from_image(color);
+
+    VImage overlay = VImage::new_memory();
+    overlay = overlay.text(&text[0u],
+      VImage::option()
+        ->set("font", &font[0u])
+        ->set("width", width)
+        ->set("align", &align[0u])
+        ->set("spacing", spacing)
+        ->set("dpi", 300));
+
+    overlay = overlay.embed(pos[0], pos[1], image.width(), image.height());
+
+    image = overlay.ifthenelse(pixel, image, VImage::option()
+      ->set("blend", TRUE));
+
+    return image;
+  }
+
 }  // namespace sharp

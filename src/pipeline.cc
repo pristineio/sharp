@@ -59,6 +59,7 @@ using sharp::Threshold;
 using sharp::Bandbool;
 using sharp::Boolean;
 using sharp::Trim;
+using sharp::Text;
 
 using sharp::ImageType;
 using sharp::ImageTypeId;
@@ -766,6 +767,12 @@ class PipelineWorker : public AsyncWorker {
         }
       }
 
+      // Overlay text over the image
+      if (baton->text.length() > 0) {
+        image = Text(image, baton->text, baton->textAlign, baton->colors,
+          baton->pos, baton->textWidth, baton->font, baton->lineSpacing);
+      }
+
       // Reverse premultiplication after all transformations:
       if (shouldPremultiplyAlpha) {
         image = image.unpremultiply(VImage::option()->set("max_alpha", maxAlpha));
@@ -1222,6 +1229,19 @@ NAN_METHOD(pipeline) {
   baton->overlayYOffset = attrAs<int32_t>(options, "overlayYOffset");
   baton->overlayTile = attrAs<bool>(options, "overlayTile");
   baton->overlayCutout = attrAs<bool>(options, "overlayCutout");
+  // Text overlay options
+  baton->text = attrAsStr(options, "text");
+  baton->textAlign = attrAsStr(options, "textAlign");
+  Local<Object> textColor = Get(options, New("textColor").ToLocalChecked()).ToLocalChecked().As<Object>();
+  for (int i = 0; i < 3; i++) {
+    baton->colors[i] = To<int32_t>(Get(textColor, i).ToLocalChecked()).FromJust();
+  }
+  Local<Object> textOffset = Get(options, New("textOffset").ToLocalChecked()).ToLocalChecked().As<Object>();
+  baton->pos[0] = To<int32_t>(Get(textOffset, 0).ToLocalChecked()).FromJust();
+  baton->pos[1] = To<int32_t>(Get(textOffset, 1).ToLocalChecked()).FromJust();
+  baton->textWidth = attrAs<int32_t>(options, "textWidth");
+  baton->font = attrAsStr(options, "font");
+  baton->lineSpacing = attrAs<int32_t>(options, "lineSpacing");
   // Boolean options
   baton->booleanFileIn = attrAsStr(options, "booleanFileIn");
   Local<Object> booleanBufferIn;
