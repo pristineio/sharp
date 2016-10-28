@@ -14,77 +14,6 @@
 #include "operations.h"
 #include "pipeline.h"
 
-<<<<<<< HEAD
-using v8::Handle;
-using v8::Local;
-using v8::Value;
-using v8::Object;
-using v8::Integer;
-using v8::Uint32;
-using v8::String;
-using v8::Array;
-using v8::Function;
-using v8::Exception;
-
-using Nan::AsyncQueueWorker;
-using Nan::AsyncWorker;
-using Nan::Callback;
-using Nan::HandleScope;
-using Nan::Utf8String;
-using Nan::Has;
-using Nan::Get;
-using Nan::Set;
-using Nan::To;
-using Nan::New;
-using Nan::NewBuffer;
-using Nan::Null;
-using Nan::Equals;
-
-using vips::VImage;
-using vips::VInterpolate;
-using vips::VOption;
-using vips::VError;
-
-using sharp::Composite;
-using sharp::Cutout;
-using sharp::Normalize;
-using sharp::Gamma;
-using sharp::Blur;
-using sharp::Convolve;
-using sharp::Sharpen;
-using sharp::EntropyCrop;
-using sharp::TileCache;
-using sharp::Threshold;
-using sharp::Bandbool;
-using sharp::Boolean;
-using sharp::Trim;
-using sharp::Text;
-
-using sharp::ImageType;
-using sharp::ImageTypeId;
-using sharp::DetermineImageType;
-using sharp::HasProfile;
-using sharp::HasAlpha;
-using sharp::ExifOrientation;
-using sharp::SetExifOrientation;
-using sharp::RemoveExifOrientation;
-using sharp::SetDensity;
-using sharp::IsJpeg;
-using sharp::IsPng;
-using sharp::IsWebp;
-using sharp::IsTiff;
-using sharp::IsDz;
-using sharp::IsDzZip;
-using sharp::IsV;
-using sharp::FreeCallback;
-using sharp::CalculateCrop;
-using sharp::Is16Bit;
-using sharp::MaximumImageAlpha;
-using sharp::GetBooleanOperation;
-
-using sharp::counterProcess;
-using sharp::counterQueue;
-
 class PipelineWorker : public Nan::AsyncWorker {
  public:
   PipelineWorker(
@@ -704,10 +633,9 @@ class PipelineWorker : public Nan::AsyncWorker {
         }
       }
 
-      // Overlay text over the image
       if (baton->text.length() > 0) {
-        image = Text(image, baton->text, baton->textAlign, baton->colors,
-          baton->pos, baton->textWidth, baton->font, baton->lineSpacing);
+        image = sharp::Text(image, baton->text, baton->textAlign, baton->colors,
+        baton->pos, baton->textWidth, baton->font, baton->lineSpacing);
       }
 
       // Reverse premultiplication after all transformations:
@@ -1127,42 +1055,6 @@ NAN_METHOD(pipeline) {
     baton->background[i] = AttrTo<uint32_t>(background, i);
   }
   // Overlay options
-<<<<<<< HEAD
-  baton->overlayFileIn = attrAsStr(options, "overlayFileIn");
-  Local<Object> overlayBufferIn;
-  if (node::Buffer::HasInstance(Get(options, New("overlayBufferIn").ToLocalChecked()).ToLocalChecked())) {
-    overlayBufferIn = Get(options, New("overlayBufferIn").ToLocalChecked()).ToLocalChecked().As<Object>();
-    baton->overlayBufferInLength = node::Buffer::Length(overlayBufferIn);
-    baton->overlayBufferIn = node::Buffer::Data(overlayBufferIn);
-    buffersToPersist.push_back(overlayBufferIn);
-  }
-  baton->overlayGravity = attrAs<int32_t>(options, "overlayGravity");
-  baton->overlayXOffset = attrAs<int32_t>(options, "overlayXOffset");
-  baton->overlayYOffset = attrAs<int32_t>(options, "overlayYOffset");
-  baton->overlayTile = attrAs<bool>(options, "overlayTile");
-  baton->overlayCutout = attrAs<bool>(options, "overlayCutout");
-  // Text overlay options
-  baton->text = attrAsStr(options, "text");
-  baton->textAlign = attrAsStr(options, "textAlign");
-  Local<Object> textColor = Get(options, New("textColor").ToLocalChecked()).ToLocalChecked().As<Object>();
-  for (int i = 0; i < 3; i++) {
-    baton->colors[i] = To<int32_t>(Get(textColor, i).ToLocalChecked()).FromJust();
-  }
-  Local<Object> textOffset = Get(options, New("textOffset").ToLocalChecked()).ToLocalChecked().As<Object>();
-  baton->pos[0] = To<int32_t>(Get(textOffset, 0).ToLocalChecked()).FromJust();
-  baton->pos[1] = To<int32_t>(Get(textOffset, 1).ToLocalChecked()).FromJust();
-  baton->textWidth = attrAs<int32_t>(options, "textWidth");
-  baton->font = attrAsStr(options, "font");
-  baton->lineSpacing = attrAs<int32_t>(options, "lineSpacing");
-  // Boolean options
-  baton->booleanFileIn = attrAsStr(options, "booleanFileIn");
-  Local<Object> booleanBufferIn;
-  if (node::Buffer::HasInstance(Get(options, New("booleanBufferIn").ToLocalChecked()).ToLocalChecked())) {
-    booleanBufferIn = Get(options, New("booleanBufferIn").ToLocalChecked()).ToLocalChecked().As<Object>();
-    baton->booleanBufferInLength = node::Buffer::Length(booleanBufferIn);
-    baton->booleanBufferIn = node::Buffer::Data(booleanBufferIn);
-    buffersToPersist.push_back(booleanBufferIn);
-  }
   if (HasAttr(options, "overlay")) {
     baton->overlay = CreateInputDescriptor(AttrAs<v8::Object>(options, "overlay"), buffersToPersist);
     baton->overlayGravity = AttrTo<int32_t>(options, "overlayGravity");
@@ -1171,6 +1063,19 @@ NAN_METHOD(pipeline) {
     baton->overlayTile = AttrTo<bool>(options, "overlayTile");
     baton->overlayCutout = AttrTo<bool>(options, "overlayCutout");
   }
+  // Text overlay options
+  baton->text = AttrAsStr(options, "text");
+  baton->textAlign = AttrAsStr(options, "textAlign");
+  v8::Local<v8::Object> textColor = Nan::Get(options, Nan::New("textColor").ToLocalChecked()).ToLocalChecked().As<v8::Object>();
+  for (int i = 0; i < 3; i++) {
+    baton->colors[i] = Nan::To<int32_t>(Nan::Get(textColor, i).ToLocalChecked()).FromJust();
+  }
+  v8::Local<v8::Object> textOffset = Nan::Get(options, Nan::New("textOffset").ToLocalChecked()).ToLocalChecked().As<v8::Object>();
+  baton->pos[0] = Nan::To<int32_t>(Nan::Get(textOffset, 0).ToLocalChecked()).FromJust();
+  baton->pos[1] = Nan::To<int32_t>(Nan::Get(textOffset, 1).ToLocalChecked()).FromJust();
+  baton->textWidth = AttrTo<int32_t>(options, "textWidth");
+  baton->font = AttrAsStr(options, "font");
+  baton->lineSpacing = AttrTo<int32_t>(options, "lineSpacing");
   // Resize options
   baton->withoutEnlargement = AttrTo<bool>(options, "withoutEnlargement");
   baton->crop = AttrTo<int32_t>(options, "crop");

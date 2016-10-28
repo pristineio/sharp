@@ -32,7 +32,6 @@ struct PipelineBaton {
   int overlayYOffset;
   bool overlayTile;
   bool overlayCutout;
-<<<<<<< HEAD
   std::string text;
   std::string textAlign;
   int colors[3];
@@ -43,9 +42,7 @@ struct PipelineBaton {
   std::string booleanFileIn;
   char *booleanBufferIn;
   size_t booleanBufferInLength;
-=======
   std::vector<sharp::InputDescriptor *> joinChannelIn;
->>>>>>> 1051fcd278188c5ffe2c0ac4969ba82c94713764
   int topOffsetPre;
   int leftOffsetPre;
   int widthPre;
@@ -122,15 +119,12 @@ struct PipelineBaton {
     overlayYOffset(-1),
     overlayTile(false),
     overlayCutout(false),
-<<<<<<< HEAD
     text(""),
     textAlign("left"),
     textWidth(-1),
     font("sans"),
     lineSpacing(16),
     booleanBufferInLength(0),
-=======
->>>>>>> 1051fcd278188c5ffe2c0ac4969ba82c94713764
     topOffsetPre(-1),
     topOffsetPost(-1),
     channels(0),
