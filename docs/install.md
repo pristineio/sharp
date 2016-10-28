@@ -7,7 +7,7 @@ npm install sharp
 ### Prerequisites
 
 * C++11 compatible compiler such as gcc 4.8+, clang 3.0+ or MSVC 2013+
-* [node-gyp](https://github.com/TooTallNate/node-gyp#installation)
+* [node-gyp](https://github.com/TooTallNate/node-gyp#installation) and its dependencies
 
 ### Linux
 
@@ -15,31 +15,22 @@ npm install sharp
 [![Linux Build Status](https://circleci.com/gh/lovell/sharp.svg?style=svg&circle-token=6cb6d1d287a51af83722b19ed8885377fbc85e5c)](https://circleci.com/gh/lovell/sharp)
 
 libvips and its dependencies are fetched and stored within `node_modules/sharp/lib` during `npm install`.
-This involves an automated HTTPS download of approximately 6.7MB.
+This involves an automated HTTPS download of approximately 6.5MB.
 
 Most recent Linux-based operating systems with glibc running on x64 and ARMv6+ CPUs should "just work", e.g.:
 
 * Debian 7, 8
-* Ubuntu 12.04, 14.04, 15.10, 16.04
+* Ubuntu 12.04, 14.04, 16.04
 * Centos 7
-* Fedora 22, 23
+* Fedora 23, 24
 * openSUSE 13.2
-* Archlinux 2015.06.01
+* Archlinux
 * Raspbian Jessie
-* Amazon Linux 2015.03, 2015.09
+* Amazon Linux 2016.03, 2016.09
 
-To use your own version of libvips instead of the provided binaries, make sure it is
-at least the version listed under `config.libvips` in the `package.json` file,
-that it can be located using `pkg-config --modversion vips-cpp`.
-
-There are [changes in the C++11 ABI](https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_dual_abi.html)
-when using v5.1+ of the `g++` compiler.
-If you have installed `libvips-dev` via package manager on an OS such as Debian testing/unstable,
-you can pass the required value of the `_GLIBCXX_USE_CXX11_ABI` macro using the `--sharp-cxx11` flag.
-
-```sh
-npm install --sharp-cxx11=1
-```
+To use a globally-installed version of libvips instead of the provided binaries,
+make sure it is at least the version listed under `config.libvips` in the `package.json` file
+and that it can be located using `pkg-config --modversion vips-cpp`.
 
 If you are using non-stadard paths (anything other than `/usr` or `/usr/local`),
 you might need to set `PKG_CONFIG_PATH` during `npm install`
@@ -66,30 +57,14 @@ via `sharp.cache(false)` to avoid a stack overflow.
 
 [![OS X 10.9.5 Build Status](https://travis-ci.org/lovell/sharp.png?branch=master)](https://travis-ci.org/lovell/sharp)
 
-libvips must be installed before `npm install` is run.
-This can be achieved via homebrew:
+libvips and its dependencies are fetched and stored within `node_modules/sharp/lib` during `npm install`.
+This involves an automated HTTPS download of approximately 6.5MB.
 
-```sh
-brew install homebrew/science/vips
-```
+To use your own version of libvips instead of the provided binaries, make sure it is
+at least the version listed under `config.libvips` in the `package.json` file and
+that it can be located using `pkg-config --modversion vips-cpp`.
 
-For WebP suppport use:
-
-```sh
-brew install homebrew/science/vips --with-webp
-```
-
-A missing or incorrectly configured _Xcode Command Line Tools_ installation
-[can lead](https://github.com/lovell/sharp/issues/80) to a
-`library not found for -ljpeg` error.
-If so, please try: `xcode-select --install`.
-
-The _gettext_ dependency of _libvips_
-[can lead](https://github.com/lovell/sharp/issues/9)
-to a `library not found for -lintl` error.
-If so, please try `brew link gettext --force`.
-
-### Windows
+### Windows x64
 
 [![Windows x64 Build Status](https://ci.appveyor.com/api/projects/status/pgtul704nkhhg6sg)](https://ci.appveyor.com/project/lovell/sharp)
 

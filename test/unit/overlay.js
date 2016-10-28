@@ -154,11 +154,20 @@ describe('Overlays', function() {
     });
   }
 
-  it('Fail when overlay does not contain alpha channel', function(done) {
+  it('Composite JPEG onto PNG', function(done) {
     sharp(fixtures.inputPngOverlayLayer1)
-      .overlayWith(fixtures.inputJpg)
+      .overlayWith(fixtures.inputJpgWithLandscapeExif1)
       .toBuffer(function(error) {
-        assert.strictEqual(true, error instanceof Error);
+        if (error) return done(error);
+        done();
+      });
+  });
+
+  it('Composite opaque JPEG onto JPEG', function(done) {
+    sharp(fixtures.inputJpg)
+      .overlayWith(fixtures.inputJpgWithLandscapeExif1)
+      .toBuffer(function(error) {
+        if (error) return done(error);
         done();
       });
   });
@@ -428,7 +437,27 @@ describe('Overlays', function() {
           assert.strictEqual(3, info.channels);
           fixtures.assertSimilar(expected, data, done);
         });
-      
+    });
+
+    it('Overlay 100x100 with 50x50 so bottom edges meet', function(done) {
+      sharp(fixtures.inputJpg)
+        .resize(50, 50)
+        .toBuffer(function(err, overlay) {
+          if (err) throw err;
+          sharp(fixtures.inputJpgWithLandscapeExif1)
+            .resize(100, 100)
+            .overlayWith(overlay, {
+              top: 50,
+              left: 40
+            })
+            .toBuffer(function(err, data, info) {
+              if (err) throw err;
+              assert.strictEqual('jpeg', info.format);
+              assert.strictEqual(100, info.width);
+              assert.strictEqual(100, info.height);
+              fixtures.assertSimilar(fixtures.expected('overlay-bottom-edges-meet.jpg'), data, done);
+            });
+        });
     });
   });
 
@@ -525,6 +554,30 @@ describe('Overlays', function() {
         assert.strictEqual(98, info.height);
         assert.strictEqual(3, info.channels);
         fixtures.assertSimilar(expected, data, done);
+      });
+  });
+
+  it('Composite RGBA raw buffer onto JPEG', function(done) {
+    sharp(fixtures.inputPngOverlayLayer1)
+      .raw()
+      .toBuffer(function(err, data, info) {
+        if (err) throw err;
+        sharp(fixtures.inputJpg)
+          .resize(2048, 1536)
+          .overlayWith(data, { raw: info })
+          .toBuffer(function(err, data) {
+            if (err) throw err;
+            fixtures.assertSimilar(fixtures.expected('overlay-jpeg-with-rgb.jpg'), data, done);
+          });
+      });
+  });
+
+  it('Throws an error when called with an invalid file', function(done) {
+    sharp(fixtures.inputJpg)
+      .overlayWith('notfound.png')
+      .toBuffer(function(err) {
+        assert(err instanceof Error);
+        done();
       });
   });
 

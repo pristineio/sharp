@@ -17,6 +17,16 @@ var minimumLibvipsVersion = process.env.npm_package_config_libvips || require('.
 
 var vipsHeaderPath = path.join(__dirname, 'include', 'vips', 'vips.h');
 
+var platform = process.env.npm_config_platform || process.platform;
+
+var arch = process.env.npm_config_arch || process.arch;
+var arm_version = process.env.npm_config_armv || process.config.variables.arm_version;
+
+if (arch === 'arch64' || arch === 'armhf') {
+  arch = 'arm';
+  if (arch === 'arch64') arm_version = '8';
+}
+
 // -- Helpers
 
 // Does this file exist?
@@ -46,6 +56,24 @@ var unpack = function(tarPath, done) {
     .pipe(extractor);
 };
 
+var platformId = function() {
+  var id = [platform, arch].join('-');
+  if (arch === 'arm') {
+    switch(arm_version) {
+      case '8':
+        id = id + 'v8';
+        break;
+      case '7':
+        id = id + 'v7';
+        break;
+      default:
+        id = id + 'v6';
+        break;
+    }
+  }
+  return id;
+};
+
 // Error
 var error = function(msg) {
   if (msg instanceof Error) {
@@ -61,7 +89,7 @@ module.exports.download_vips = function() {
   // Has vips been installed locally?
   if (!isFile(vipsHeaderPath)) {
     // Ensure Intel 64-bit or ARM
-    if (process.arch === 'ia32') {
+    if (arch === 'ia32') {
       error('Intel Architecture 32-bit systems require manual installation - please see http://sharp.dimens.io/en/stable/install/');
     }
     // Ensure glibc >= 2.15
@@ -77,8 +105,7 @@ module.exports.download_vips = function() {
       }
     }
     // Arch/platform-specific .tar.gz
-    var platform = (process.arch === 'arm') ? 'arm' : process.platform.substr(0, 3);
-    var tarFilename = ['libvips', minimumLibvipsVersion, platform].join('-') + '.tar.gz';
+    var tarFilename = ['libvips', minimumLibvipsVersion, platformId()].join('-') + '.tar.gz';
     var tarPath = path.join(__dirname, 'packaging', tarFilename);
     if (isFile(tarPath)) {
       unpack(tarPath);
@@ -119,16 +146,6 @@ module.exports.use_global_vips = function() {
       globalVipsVersion,
       minimumLibvipsVersion
     );
-  }
-  if (process.platform === 'darwin' && !useGlobalVips) {
-    if (globalVipsVersion) {
-      error(
-        'Found libvips ' + globalVipsVersion + ' but require ' + minimumLibvipsVersion +
-        '\nPlease upgrade libvips by running: brew update && brew upgrade'
-      );
-    } else {
-      error('Please install libvips by running: brew install homebrew/science/vips --with-webp --with-graphicsmagick');
-    }
   }
   process.stdout.write(useGlobalVips ? 'true' : 'false');
 };

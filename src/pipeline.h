@@ -6,6 +6,7 @@
 #include <vips/vips8>
 
 #include "nan.h"
+#include "common.h"
 
 NAN_METHOD(pipeline);
 
@@ -18,27 +19,20 @@ enum class Canvas {
 };
 
 struct PipelineBaton {
-  std::string fileIn;
-  char *bufferIn;
-  size_t bufferInLength;
+  sharp::InputDescriptor *input;
   std::string iccProfilePath;
   int limitInputPixels;
-  int density;
-  int rawWidth;
-  int rawHeight;
-  int rawChannels;
   std::string formatOut;
   std::string fileOut;
   void *bufferOut;
   size_t bufferOutLength;
-  std::string overlayFileIn;
-  char *overlayBufferIn;
-  size_t overlayBufferInLength;
+  sharp::InputDescriptor *overlay;
   int overlayGravity;
   int overlayXOffset;
   int overlayYOffset;
   bool overlayTile;
   bool overlayCutout;
+<<<<<<< HEAD
   std::string text;
   std::string textAlign;
   int colors[3];
@@ -49,6 +43,9 @@ struct PipelineBaton {
   std::string booleanFileIn;
   char *booleanBufferIn;
   size_t booleanBufferInLength;
+=======
+  std::vector<sharp::InputDescriptor *> joinChannelIn;
+>>>>>>> 1051fcd278188c5ffe2c0ac4969ba82c94713764
   int topOffsetPre;
   int leftOffsetPre;
   int widthPre;
@@ -62,6 +59,8 @@ struct PipelineBaton {
   int channels;
   Canvas canvas;
   int crop;
+  int cropCalcLeft;
+  int cropCalcTop;
   std::string kernel;
   std::string interpolator;
   double background[4];
@@ -103,41 +102,42 @@ struct PipelineBaton {
   int convKernelHeight;
   double convKernelScale;
   double convKernelOffset;
-  VipsOperationBoolean bandBoolOp;
+  sharp::InputDescriptor *boolean;
   VipsOperationBoolean booleanOp;
+  VipsOperationBoolean bandBoolOp;
   int extractChannel;
+  VipsInterpretation colourspace;
   int tileSize;
   int tileOverlap;
   VipsForeignDzContainer tileContainer;
   VipsForeignDzLayout tileLayout;
 
   PipelineBaton():
-    bufferInLength(0),
+    input(nullptr),
     limitInputPixels(0),
-    density(72),
-    rawWidth(0),
-    rawHeight(0),
-    rawChannels(0),
-    formatOut(""),
-    fileOut(""),
     bufferOutLength(0),
-    overlayBufferInLength(0),
+    overlay(nullptr),
     overlayGravity(0),
     overlayXOffset(-1),
     overlayYOffset(-1),
     overlayTile(false),
     overlayCutout(false),
+<<<<<<< HEAD
     text(""),
     textAlign("left"),
     textWidth(-1),
     font("sans"),
     lineSpacing(16),
     booleanBufferInLength(0),
+=======
+>>>>>>> 1051fcd278188c5ffe2c0ac4969ba82c94713764
     topOffsetPre(-1),
     topOffsetPost(-1),
     channels(0),
     canvas(Canvas::CROP),
     crop(0),
+    cropCalcLeft(-1),
+    cropCalcTop(-1),
     flatten(false),
     negate(false),
     blurSigma(0.0),
@@ -172,9 +172,11 @@ struct PipelineBaton {
     convKernelHeight(0),
     convKernelScale(0.0),
     convKernelOffset(0.0),
-    bandBoolOp(VIPS_OPERATION_BOOLEAN_LAST),
+    boolean(nullptr),
     booleanOp(VIPS_OPERATION_BOOLEAN_LAST),
+    bandBoolOp(VIPS_OPERATION_BOOLEAN_LAST),
     extractChannel(-1),
+    colourspace(VIPS_INTERPRETATION_LAST),
     tileSize(256),
     tileOverlap(0),
     tileContainer(VIPS_FOREIGN_DZ_CONTAINER_FS),

@@ -9,7 +9,7 @@ var semver = require('semver');
 var color = require('color');
 var BluebirdPromise = require('bluebird');
 
-var sharp = require('./build/Release/sharp');
+var sharp = require('./build/Release/sharp.node');
 
 // Versioning
 var versions = {
@@ -42,14 +42,8 @@ var Sharp = function(input, options) {
   stream.Duplex.call(this);
   this.options = {
     // input options
-    bufferIn: [],
-    streamIn: false,
     sequentialRead: false,
     limitInputPixels: maximum.pixels,
-    density: 72,
-    rawWidth: 0,
-    rawHeight: 0,
-    rawChannels: 0,
     // ICC profiles
     iccProfilePath: path.join(__dirname, 'icc') + path.sep,
     // resize options
@@ -92,9 +86,8 @@ var Sharp = function(input, options) {
     normalize: 0,
     booleanBufferIn: null,
     booleanFileIn: '',
+    joinChannelIn: [],
     // overlay
-    overlayFileIn: '',
-    overlayBufferIn: null,
     overlayGravity: 0,
     overlayXOffset : -1,
     overlayYOffset : -1,
@@ -126,24 +119,13 @@ var Sharp = function(input, options) {
     tileSize: 256,
     tileOverlap: 0,
     extractChannel: -1,
+    colourspace: 'srgb',
     // Function to notify of queue length changes
     queueListener: function(queueLength) {
       module.exports.queue.emit('change', queueLength);
     }
   };
-  if (isString(input)) {
-    // input=file
-    this.options.fileIn = input;
-  } else if (isBuffer(input)) {
-    // input=buffer
-    this.options.bufferIn = input;
-  } else if (!isDefined(input)) {
-    // input=stream
-    this.options.streamIn = true;
-  } else {
-    throw new Error('Unsupported input ' + typeof input);
-  }
-  this._inputOptions(options);
+  this.options.input = this._createInputDescriptor(input, options, { allowStream: true });
   return this;
 };
 module.exports = Sharp;
@@ -196,37 +178,50 @@ var contains = function(val, list) {
 };
 
 /*
-  Set input-related options
-    density: DPI at which to load vector images via libmagick
+  Create Object containing input and input-related options
 */
-Sharp.prototype._inputOptions = function(options) {
-  if (isObject(options)) {
+Sharp.prototype._createInputDescriptor = function(input, inputOptions, containerOptions) {
+  var inputDescriptor = {};
+  if (isString(input)) {
+    // filesystem
+    inputDescriptor.file = input;
+  } else if (isBuffer(input)) {
+    // Buffer
+    inputDescriptor.buffer = input;
+  } else if (!isDefined(input) && isObject(containerOptions) && containerOptions.allowStream) {
+    // Stream
+    inputDescriptor.buffer = [];
+  } else {
+    throw new Error('Unsupported input ' + typeof input);
+  }
+  if (isObject(inputOptions)) {
     // Density
-    if (isDefined(options.density)) {
-      if (isInteger(options.density) && inRange(options.density, 1, 2400)) {
-        this.options.density = options.density;
+    if (isDefined(inputOptions.density)) {
+      if (isInteger(inputOptions.density) && inRange(inputOptions.density, 1, 2400)) {
+        inputDescriptor.density = inputOptions.density;
       } else {
-        throw new Error('Invalid density (1 to 2400) ' + options.density);
+        throw new Error('Invalid density (1 to 2400) ' + inputOptions.density);
       }
     }
     // Raw pixel input
-    if (isDefined(options.raw)) {
+    if (isDefined(inputOptions.raw)) {
       if (
-        isObject(options.raw) &&
-        isInteger(options.raw.width) && inRange(options.raw.width, 1, maximum.width) &&
-        isInteger(options.raw.height) && inRange(options.raw.height, 1, maximum.height) &&
-        isInteger(options.raw.channels) && inRange(options.raw.channels, 1, 4)
+        isObject(inputOptions.raw) &&
+        isInteger(inputOptions.raw.width) && inRange(inputOptions.raw.width, 1, maximum.width) &&
+        isInteger(inputOptions.raw.height) && inRange(inputOptions.raw.height, 1, maximum.height) &&
+        isInteger(inputOptions.raw.channels) && inRange(inputOptions.raw.channels, 1, 4)
       ) {
-        this.options.rawWidth = options.raw.width;
-        this.options.rawHeight = options.raw.height;
-        this.options.rawChannels = options.raw.channels;
+        inputDescriptor.rawWidth = inputOptions.raw.width;
+        inputDescriptor.rawHeight = inputOptions.raw.height;
+        inputDescriptor.rawChannels = inputOptions.raw.channels;
       } else {
         throw new Error('Expected width, height and channels for raw pixel input');
       }
     }
-  } else if (isDefined(options)) {
-    throw new Error('Invalid input options ' + options);
+  } else if (isDefined(inputOptions)) {
+    throw new Error('Invalid input options ' + inputOptions);
   }
+  return inputDescriptor;
 };
 
 /*
@@ -234,9 +229,9 @@ Sharp.prototype._inputOptions = function(options) {
 */
 Sharp.prototype._write = function(chunk, encoding, callback) {
   /*jslint unused: false */
-  if (this.options.streamIn) {
+  if (Array.isArray(this.options.input.buffer)) {
     if (isBuffer(chunk)) {
-      this.options.bufferIn.push(chunk);
+      this.options.input.buffer.push(chunk);
       callback();
     } else {
       callback(new Error('Non-Buffer data on Writable Stream'));
@@ -247,12 +242,15 @@ Sharp.prototype._write = function(chunk, encoding, callback) {
 };
 
 /*
-  Flattens the array of chunks in bufferIn
+  Flattens the array of chunks accumulated in input.buffer
 */
 Sharp.prototype._flattenBufferIn = function() {
-  if (Array.isArray(this.options.bufferIn)) {
-    this.options.bufferIn = Buffer.concat(this.options.bufferIn);
+  if (this._isStreamInput()) {
+    this.options.input.buffer = Buffer.concat(this.options.input.buffer);
   }
+};
+Sharp.prototype._isStreamInput = function() {
+  return Array.isArray(this.options.input.buffer);
 };
 
 // Weighting to apply to image crop
@@ -271,7 +269,8 @@ module.exports.gravity = {
 
 // Strategies for automagic behaviour
 module.exports.strategy = {
-  entropy: 16
+  entropy: 16,
+  attention: 17
 };
 
 /*
@@ -288,7 +287,7 @@ Sharp.prototype.crop = function(crop) {
   } else if (isString(crop) && isInteger(module.exports.gravity[crop])) {
     // Gravity (string)
     this.options.crop = module.exports.gravity[crop];
-  } else if (isInteger(crop) && crop === module.exports.strategy.entropy) {
+  } else if (isInteger(crop) && crop >= module.exports.strategy.entropy) {
     // Strategy
     this.options.crop = crop;
   } else {
@@ -378,14 +377,8 @@ Sharp.prototype.negate = function(negate) {
 /*
   Bitwise boolean operations between images
 */
-Sharp.prototype.boolean = function(operand, operator) {
-  if (isString(operand)) {
-    this.options.booleanFileIn = operand;
-  } else if (isBuffer(operand)) {
-    this.options.booleanBufferIn = operand;
-  } else {
-    throw new Error('Unsupported boolean operand ' + typeof operand);
-  }
+Sharp.prototype.boolean = function(operand, operator, options) {
+  this.options.boolean = this._createInputDescriptor(operand, options);
   if (isString(operator) && contains(operator, ['and', 'or', 'eor'])) {
     this.options.booleanOp = operator;
   } else {
@@ -398,13 +391,9 @@ Sharp.prototype.boolean = function(operand, operator) {
   Overlay with another image, using an optional gravity
 */
 Sharp.prototype.overlayWith = function(overlay, options) {
-  if (isString(overlay)) {
-    this.options.overlayFileIn = overlay;
-  } else if (isBuffer(overlay)) {
-    this.options.overlayBufferIn = overlay;
-  } else {
-    throw new Error('Unsupported overlay ' + typeof overlay);
-  }
+  this.options.overlay = this._createInputDescriptor(overlay, options, {
+    allowStream: false
+  });
   if (isObject(options)) {
     if (isDefined(options.tile)) {
       if (isBoolean(options.tile)) {
@@ -519,6 +508,20 @@ Sharp.prototype.text = function(text, options) {
 };
 
 /*
+  Add another color channel to the image
+*/
+Sharp.prototype.joinChannel = function(images, options) {
+  if (Array.isArray(images)) {
+    images.forEach(function(image) {
+      this.options.joinChannelIn.push(this._createInputDescriptor(image, options));
+    }, this);
+  } else {
+    this.options.joinChannelIn.push(this._createInputDescriptor(images, options));
+  }
+  return this;
+};
+
+/*
   Rotate output image by 0, 90, 180 or 270 degrees
   Auto-rotation based on the EXIF Orientation tag is represented by an angle of -1
 */
@@ -584,22 +587,25 @@ Sharp.prototype.blur = function(sigma) {
   Convolve the image with a kernel.
 */
 Sharp.prototype.convolve = function(kernel) {
-  if (!isDefined(kernel) || !isDefined(kernel.kernel) ||
-      !isDefined(kernel.width) || !isDefined(kernel.height) ||
-      !inRange(kernel.width,3,1001) || !inRange(kernel.height,3,1001) ||
+  if (!isObject(kernel) || !Array.isArray(kernel.kernel) ||
+      !isInteger(kernel.width) || !isInteger(kernel.height) ||
+      !inRange(kernel.width, 3, 1001) || !inRange(kernel.height, 3, 1001) ||
       kernel.height * kernel.width != kernel.kernel.length
      ) {
     // must pass in a kernel
     throw new Error('Invalid convolution kernel');
   }
-  if(!isDefined(kernel.scale)) {
-    var sum = 0;
-    kernel.kernel.forEach(function(e) {
-      sum += e;
-    });
-    kernel.scale = sum;
+  // Default scale is sum of kernel values
+  if (!isInteger(kernel.scale)) {
+    kernel.scale = kernel.kernel.reduce(function(a, b) {
+      return a + b;
+    }, 0);
   }
-  if(!isDefined(kernel.offset)) {
+  // Clamp scale to a minimum value of 1
+  if (kernel.scale < 1) {
+    kernel.scale = 1;
+  }
+  if (!isInteger(kernel.offset)) {
     kernel.offset = 0;
   }
   this.options.convKernel = kernel;
@@ -725,6 +731,18 @@ Sharp.prototype.greyscale = function(greyscale) {
   return this;
 };
 Sharp.prototype.grayscale = Sharp.prototype.greyscale;
+
+/*
+  Set output colourspace
+*/
+Sharp.prototype.toColourspace = function(colourspace) {
+  if (!isString(colourspace) ) {
+    throw new Error('Invalid output colourspace ' + colourspace);
+  }
+  this.options.colourspace = colourspace;
+  return this;
+};
+Sharp.prototype.toColorspace = Sharp.prototype.toColourspace;
 
 Sharp.prototype.progressive = function(progressive) {
   this.options.progressive = isBoolean(progressive) ? progressive : true;
@@ -914,6 +932,15 @@ module.exports.bool = {
   or: 'or',
   eor: 'eor'
 };
+// Colourspaces
+module.exports.colourspace = {
+  multiband: 'multiband',
+  'b-w': 'b-w',
+  bw: 'b-w',
+  cmyk: 'cmyk',
+  srgb: 'srgb'
+};
+module.exports.colorspace = module.exports.colourspace;
 
 /*
   Resize image to width x height pixels
@@ -959,13 +986,6 @@ Sharp.prototype.resize = function(width, height, options) {
   }
   return this;
 };
-Sharp.prototype.interpolateWith = util.deprecate(function(interpolator) {
-  return this.resize(
-    this.options.width > 0 ? this.options.width : null,
-    this.options.height > 0 ? this.options.height : null,
-    { interpolator: interpolator }
-  );
-}, 'interpolateWith: Please use resize(w, h, { interpolator: ... }) instead');
 
 /*
   Limit the total number of pixels for input images
@@ -999,7 +1019,7 @@ Sharp.prototype.toFile = function(fileOut, callback) {
       return BluebirdPromise.reject(errOutputInvalid);
     }
   } else {
-    if (this.options.fileIn === fileOut) {
+    if (this.options.input.file === fileOut) {
       var errOutputIsInput = new Error('Cannot use same file for input and output');
       if (typeof callback === 'function') {
         callback(errOutputIsInput);
@@ -1089,7 +1109,7 @@ Sharp.prototype._pipeline = function(callback) {
   var that = this;
   if (typeof callback === 'function') {
     // output=file/buffer
-    if (this.options.streamIn) {
+    if (this._isStreamInput()) {
       // output=file/buffer, input=stream
       this.on('finish', function() {
         that._flattenBufferIn();
@@ -1102,7 +1122,7 @@ Sharp.prototype._pipeline = function(callback) {
     return this;
   } else if (this.options.streamOut) {
     // output=stream
-    if (this.options.streamIn) {
+    if (this._isStreamInput()) {
       // output=stream, input=stream
       this.on('finish', function() {
         that._flattenBufferIn();
@@ -1131,7 +1151,7 @@ Sharp.prototype._pipeline = function(callback) {
     return this;
   } else {
     // output=promise
-    if (this.options.streamIn) {
+    if (this._isStreamInput()) {
       // output=promise, input=stream
       return new BluebirdPromise(function(resolve, reject) {
         that.on('finish', function() {
@@ -1167,7 +1187,7 @@ Sharp.prototype._pipeline = function(callback) {
 Sharp.prototype.metadata = function(callback) {
   var that = this;
   if (typeof callback === 'function') {
-    if (this.options.streamIn) {
+    if (this._isStreamInput()) {
       this.on('finish', function() {
         that._flattenBufferIn();
         sharp.metadata(that.options, callback);
@@ -1177,7 +1197,7 @@ Sharp.prototype.metadata = function(callback) {
     }
     return this;
   } else {
-    if (this.options.streamIn) {
+    if (this._isStreamInput()) {
       return new BluebirdPromise(function(resolve, reject) {
         that.on('finish', function() {
           that._flattenBufferIn();

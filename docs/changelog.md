@@ -1,10 +1,38 @@
 # Changelog
 
-### v0.15 - "*outfit*"
+### v0.16 - "*pencil*"
 
-Requires libvips v8.3.1
+Requires libvips v8.3.3
 
-#### v0.15.2 - TBD
+#### v0.16.2 - 22<sup>nd</sup> October 2016
+
+* Restrict readelf usage to Linux only when detecting global libvips version.
+  [#602](https://github.com/lovell/sharp/issues/602)
+  [@caoko](https://github.com/caoko)
+
+#### v0.16.1 - 13<sup>th</sup> October 2016
+
+* C++11 ABI version is now auto-detected, remove sharp-cxx11 installation flag.
+
+* Add experimental 'attention' crop strategy.
+  [#295](https://github.com/lovell/sharp/issues/295)
+
+* Include .node extension for Meteor's require() implementation.
+  [#537](https://github.com/lovell/sharp/issues/537)
+  [@isjackwild](https://github.com/isjackwild)
+
+* Ensure convolution kernel scale is clamped to a minimum value of 1.
+  [#561](https://github.com/lovell/sharp/issues/561)
+  [@abagshaw](https://github.com/abagshaw)
+
+* Correct calculation of y-axis placement when overlaying image at a fixed point.
+  [#566](https://github.com/lovell/sharp/issues/566)
+  [@Nateowami](https://github.com/Nateowami)
+
+#### v0.16.0 - 18<sup>th</sup> August 2016
+
+* Add pre-compiled libvips for OS X, ARMv7 and ARMv8.
+  [#312](https://github.com/lovell/sharp/issues/312)
 
 * Ensure boolean, bandbool, extractChannel ops occur before sRGB conversion.
   [#504](https://github.com/lovell/sharp/pull/504)
@@ -18,9 +46,32 @@ Requires libvips v8.3.1
   [#511](https://github.com/lovell/sharp/pull/511)
   [@mhirsch](https://github.com/mhirsch)
 
+* Add joinChannel and toColourspace/toColorspace operations.
+  [#513](https://github.com/lovell/sharp/pull/513)
+  [@mhirsch](https://github.com/mhirsch)
+
+* Add support for raw pixel data with boolean and withOverlay operations.
+  [#516](https://github.com/lovell/sharp/pull/516)
+  [@mhirsch](https://github.com/mhirsch)
+
+* Prevent bandbool creating a single channel sRGB image.
+  [#519](https://github.com/lovell/sharp/pull/519)
+  [@mhirsch](https://github.com/mhirsch)
+
 * Ensure ICC profiles are removed from PNG output unless withMetadata used.
   [#521](https://github.com/lovell/sharp/issues/521)
   [@ChrisPinewood](https://github.com/ChrisPinewood)
+
+* Add alpha channels, if missing, to overlayWith images.
+  [#540](https://github.com/lovell/sharp/pull/540)
+  [@cmtt](https://github.com/cmtt)
+
+* Remove deprecated interpolateWith method - use resize(w, h, { interpolator: ... })
+  [#310](https://github.com/lovell/sharp/issues/310)
+
+### v0.15 - "*outfit*"
+
+Requires libvips v8.3.1
 
 #### v0.15.1 - 12<sup>th</sup> July 2016
 

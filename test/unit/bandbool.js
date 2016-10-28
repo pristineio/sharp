@@ -15,6 +15,7 @@ describe('Bandbool per-channel boolean operations', function() {
     it(op + ' operation', function(done) {
       sharp(fixtures.inputPngBooleanNoAlpha)
         .bandbool(op)
+        .toColourspace('b-w')
         .toBuffer(function(err, data, info) {
           if (err) throw err;
           assert.strictEqual(200, info.width);
@@ -24,6 +25,15 @@ describe('Bandbool per-channel boolean operations', function() {
         });
     });
   });
+
+  it('sRGB image retains 3 channels', function(done) {
+    sharp(fixtures.inputJpg)
+      .bandbool('and')
+      .toBuffer(function(err, data, info) {
+        assert.strictEqual(3, info.channels);
+        done();
+      });
+  });          
 
   it('Invalid operation', function() {
     assert.throws(function() {

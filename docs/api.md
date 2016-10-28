@@ -60,7 +60,7 @@ Fast access to image metadata without decoding any compressed image data.
 * `format`: Name of decoder used to decompress image data e.g. `jpeg`, `png`, `webp`, `gif`, `svg`
 * `width`: Number of pixels wide
 * `height`: Number of pixels high
-* `space`: Name of colour space interpretation e.g. `srgb`, `rgb`, `scrgb`, `cmyk`, `lab`, `xyz`, `b-w` [...](https://github.com/jcupitt/libvips/blob/master/libvips/iofuncs/enumtypes.c#L522)
+* `space`: Name of colour space interpretation e.g. `srgb`, `rgb`, `scrgb`, `cmyk`, `lab`, `xyz`, `b-w` [...](https://github.com/jcupitt/libvips/blob/master/libvips/iofuncs/enumtypes.c#L568)
 * `channels`: Number of bands e.g. `3` for sRGB, `4` for CMYK
 * `density`: Number of pixels per inch (DPI), if present
 * `hasProfile`: Boolean indicating the presence of an embedded ICC profile
@@ -175,12 +175,11 @@ Possible attributes of `sharp.gravity` are
 `north`, `northeast`, `east`, `southeast`, `south`,
 `southwest`, `west`, `northwest`, `center` and `centre`.
 
-Possible attributes of the experimental `sharp.strategy` are:
+The experimental strategy-based approach resizes so one dimension is at its target length
+then repeatedly ranks edge regions, discarding the edge with the lowest score based on the selected strategy.
 
-* `entropy`: resize so one dimension is at its target size
-then repeatedly remove pixels from the edge with the lowest
-[Shannon entropy](https://en.wikipedia.org/wiki/Entropy_%28information_theory%29)
-until it too reaches the target size.
+* `entropy`: focus on the region with the highest [Shannon entropy](https://en.wikipedia.org/wiki/Entropy_%28information_theory%29).
+* `attention`: focus on the region with the highest luminance frequency, colour saturation and presence of skin tones.
 
 The default crop option is a `center`/`centre` gravity.
 
@@ -445,7 +444,7 @@ Convert to 8-bit greyscale; 256 shades of grey.
 
 This is a linear operation. If the input image is in a non-linear colour space such as sRGB, use `gamma()` with `greyscale()` for the best results.
 
-The output image will still be web-friendly sRGB and contain three (identical) channels.
+By default the output image will be web-friendly sRGB and contain three (identical) color channels. This may be overridden by other sharp operations such as `toColourspace('b-w')`, which will produce an output image containing one color channel. An alpha channel may be present, and will be unchanged by the operation.
 
 #### normalize() / normalise()
 
@@ -453,12 +452,12 @@ Enhance output image contrast by stretching its luminance to cover the full dyna
 
 #### overlayWith(image, [options])
 
-Overlay (composite) a image containing an alpha channel over the processed (resized, extracted etc.) image.
+Overlay (composite) a image over the processed (resized, extracted etc.) image.
 
 `image` is one of the following, and must be the same size or smaller than the processed image:
 
-* Buffer containing PNG, WebP, GIF or SVG image data, or
-* String containing the path to an image file, with most major transparency formats supported.
+* Buffer containing image data, or
+* String containing the path to an image file
 
 `options`, if present, is an Object with the following optional attributes:
 
@@ -467,6 +466,7 @@ Overlay (composite) a image containing an alpha channel over the processed (resi
 * `left` is an integral Number representing the pixel offset from the left edge.
 * `tile` is a Boolean, defaulting to `false`. When set to `true` repeats the overlay image across the entire image with the given `gravity`.
 * `cutout` is a Boolean, defaulting to `false`. When set to `true` applies only the alpha channel of the overlay image to the image to be overlaid, giving the appearance of one image being cut out of another.
+* `raw` an Object containing `width`, `height` and `channels` when providing uncompressed data.
 
 If both `top` and `left` are provided, they take precedence over `gravity`.
 
@@ -489,11 +489,17 @@ sharp('input.png')
   });
 ```
 
+#### toColourspace(colourspace) / toColorspace(colorspace)
+
+Set the output colourspace. By default output image will be web-friendly sRGB, with additional channels interpreted as alpha channels.  
+  
+`colourspace` is a string or `sharp.colourspace` enum that identifies an output colourspace. String arguments comprise vips colour space interpretation names  e.g. `srgb`, `rgb`, `scrgb`, `cmyk`, `lab`, `xyz`, `b-w` [...](https://github.com/jcupitt/libvips/blob/master/libvips/iofuncs/enumtypes.c#L568)
+  
 #### extractChannel(channel)
 
 Extract a single channel from a multi-channel image.
 
-* `channel` is a zero-indexed integral Number representing the band number to extract. `red`, `green` or `blue` are also accepted as an alternative to `0`, `1` or `2` respectively.
+`channel` is a zero-indexed integral Number representing the band number to extract. `red`, `green` or `blue` are also accepted as an alternative to `0`, `1` or `2` respectively.
 
 ```javascript
 sharp(input)
@@ -503,6 +509,22 @@ sharp(input)
     // input_green.jpg contains the green channel of the input image
    });
 ```
+
+#### joinChannel(channels, [options])
+
+Join a data channel to the image. The meaning of the added channels depends on the output colourspace, set with `toColourspace()`. By default the output image will be web-friendly sRGB, with additional channels interpreted as alpha channels.
+
+`channels` is one of
+* a single file path
+* an array of file paths
+* a single buffer
+* an array of buffers
+
+Note that channel ordering follows vips convention:
+* sRGB: 0: Red, 1: Green, 2: Blue, 3: Alpha
+* CMYK: 0: Magenta, 1: Cyan, 2: Yellow, 3: Black, 4: Alpha
+
+Buffers may be any of the image formats supported by sharp: JPEG, PNG, WebP, GIF, SVG, TIFF or raw pixel image data. In the case of a RAW buffer, the `options` object should contain a `raw` attribute, which follows the format of the attribute of the same name in the `sharp()` constructor. See `sharp()` for details. See `raw()` for pixel ordering. 
 
 #### bandbool(operation)
 
@@ -523,11 +545,11 @@ sharp('input.png')
 In the above example if `input.png` is a 3 channel RGB image, `output.png` will be a 1 channel grayscale image where each pixel `P = R & G & B`.
 For example, if `I(1,1) = [247, 170, 14] = [0b11110111, 0b10101010, 0b00001111]` then `O(1,1) = 0b11110111 & 0b10101010 & 0b00001111 = 0b00000010 = 2`.
 
-#### boolean(image, operation)
+#### boolean(image, operation, [options])
 
 Perform a bitwise boolean operation with `image`, where `image` is one of the following:
 
-* Buffer containing PNG, WebP, GIF or SVG image data, or
+* Buffer containing JPEG, PNG, WebP, GIF, SVG, TIFF or raw pixel image data, or
 * String containing the path to an image file
 
 This operation creates an output image where each pixel is the result of the selected bitwise boolean `operation` between the corresponding pixels of the input images.
@@ -536,6 +558,10 @@ The boolean operation can be one of the following:
 * `and` performs a bitwise and operation, like the c-operator `&`.
 * `or` performs a bitwise or operation, like the c-operator `|`.
 * `eor` performs a bitwise exclusive or operation, like the c-operator `^`.
+
+`options`, if present, is an Object with the following optional attributes:
+
+* `raw` an Object containing `width`, `height` and `channels` when providing uncompressed data.
 
 ### Output
 

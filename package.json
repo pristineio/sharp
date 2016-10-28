@@ -1,6 +1,6 @@
 {
   "name": "sharp",
-  "version": "0.15.1",
+  "version": "0.16.2",
   "author": "Lovell Fuller <npm@lovell.info>",
   "contributors": [
     "Pierre Inglebert <pierre.inglebert@gmail.com>",
@@ -27,7 +27,8 @@
     "F. Orlando Galashan <frulo@gmx.de>",
     "Kleis Auke Wolthuizen <info@kleisauke.nl>",
     "Matt Hirsch <mhirsch@media.mit.edu>",
-    "Sukant Garg <garg_sms@yahoo.in>"
+    "Sukant Garg <garg_sms@yahoo.in>",
+    "Matthias Thoemmes <thoemmes@gmail.com>"
   ],
   "description": "High performance Node.js image processing, the fastest module to resize JPEG, PNG, WebP and TIFF images",
   "scripts": {
@@ -35,7 +36,7 @@
     "test": "VIPS_WARNING=0 node ./node_modules/istanbul/lib/cli.js cover ./node_modules/mocha/bin/_mocha -- --slow=5000 --timeout=30000 ./test/unit/*.js",
     "test-win": "node ./node_modules/mocha/bin/mocha --slow=5000 --timeout=60000 ./test/unit/*.js",
     "test-leak": "./test/leak/leak.sh",
-    "test-packaging": "./packaging/test.sh",
+    "test-packaging": "./packaging/test-linux-x64.sh",
     "test-clean": "rm -rf coverage/ test/fixtures/output.* && npm install && npm test"
   },
   "main": "index.js",
@@ -59,29 +60,29 @@
     "vips"
   ],
   "dependencies": {
-    "bluebird": "^3.4.1",
+    "bluebird": "^3.4.6",
     "color": "^0.11.3",
     "nan": "^2.4.0",
-    "semver": "^5.2.0",
-    "request": "^2.73.0",
+    "semver": "^5.3.0",
+    "request": "^2.75.0",
     "tar": "^2.2.1"
   },
   "devDependencies": {
-    "async": "^1.5.2",
+    "async": "^2.1.2",
     "bufferutil": "^1.2.1",
-    "coveralls": "^2.11.9",
-    "exif-reader": "^1.0.0",
+    "coveralls": "^2.11.14",
+    "exif-reader": "^1.0.1",
     "icc": "^0.0.2",
-    "istanbul": "^0.4.4",
-    "mocha": "^2.5.3",
+    "istanbul": "^0.4.5",
+    "mocha": "^3.1.2",
     "mocha-jshint": "^2.3.1",
     "node-cpplint": "^0.4.0",
-    "rimraf": "^2.5.3",
+    "rimraf": "^2.5.4",
     "unzip": "^0.1.11"
   },
   "license": "Apache-2.0",
   "config": {
-    "libvips": "8.3.1"
+    "libvips": "8.3.3"
   },
   "engines": {
     "node": ">=0.10"
