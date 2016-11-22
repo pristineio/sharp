@@ -495,8 +495,6 @@ namespace sharp {
     std::vector<double> color(colors, colors + 3);
     std::vector<double> zero(3);
 
-    VImage pixel = image.new_from_image(color);
-
     VImage overlay = VImage::new_memory();
     overlay = overlay.text(&text[0u],
       VImage::option()
@@ -506,7 +504,20 @@ namespace sharp {
         ->set("spacing", spacing)
         ->set("dpi", 300));
 
-    overlay = overlay.embed(pos[0], pos[1], image.width(), image.height());
+    std::vector<double> background { 0.0, 0.0, 0.0, 0.0 };
+
+    int outputWidth = std::max(pos[0] + overlay.width(), image.width());
+    int outputHeight = std::max(pos[1] + overlay.height() + 6, image.height());
+
+    image = image.embed(0, 0, outputWidth, outputHeight, VImage::option()
+      ->set("extend", VIPS_EXTEND_BACKGROUND)
+      ->set("background", 255));
+
+    overlay = overlay.embed(pos[0], pos[1], outputWidth, outputHeight, VImage::option()
+      ->set("extend", VIPS_EXTEND_BACKGROUND)
+      ->set("background", background));
+
+    VImage pixel = image.new_from_image(color);
 
     image = overlay.ifthenelse(pixel, image, VImage::option()
       ->set("blend", TRUE));
